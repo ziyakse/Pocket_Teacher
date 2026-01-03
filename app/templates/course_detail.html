@@ -7,13 +7,18 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background-color: #f8f9fa; }
-        .container { max-width: 480px; } /* Mobil Görünüm Sınırı */
+        .container { max-width: 480px; } 
         .module-card {
             background: white; border-radius: 15px; padding: 20px; 
             margin-bottom: 15px; border-left: 6px solid #6f42c1;
             box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            position: relative; 
         }
         .btn-start { background-color: #20c997; color: white; border: none; }
+        .btn-reset { 
+            font-size: 12px; padding: 5px 10px; border-radius: 20px; 
+            background-color: #ffc107; color: #333; text-decoration: none; font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -36,21 +41,70 @@
 
     {% for module in modules %}
     <div class="module-card">
-        <div class="d-flex justify-content-between">
+        <div class="d-flex justify-content-between align-items-center">
             <div>
                 <small class="text-uppercase text-muted fw-bold" style="font-size: 10px;">ÜNİTE {{ loop.index }}</small>
                 <h5 class="fw-bold mt-1">{{ module.module_name }}</h5>
+                
+                {% if module.progress >= 50 %}
+                <a href="{{ url_for('student.reset_module', module_id=module.module_id) }}" class="btn-reset mt-1 d-inline-block" onclick="return confirm('Bu üniteyi sıfırlayıp baştan çözmek istiyor musun?')">
+                    ↺ Tekrar Et
+                </a>
+                {% endif %}
             </div>
-            <a href="{{ url_for('student.module_content', module_id=module.module_id) }}" class="btn btn-start rounded-circle" style="width:40px; height:40px; display:flex; align-items:center; justify-content:center;">▶</a>
+            
+            <div class="d-flex gap-2 align-items-center">
+                <button onclick="upgradeLevel({{ module.module_id }}, this)" class="btn btn-warning rounded-pill fw-bold btn-sm" title="Başarın %70 üzerindeyse tıkla!">
+                    ⚡ Seviye Atla
+                </button>
+
+                <a href="{{ url_for('student.module_content', module_id=module.module_id) }}" class="btn btn-start rounded-circle" style="width:40px; height:40px; display:flex; align-items:center; justify-content:center;">
+                    ▶
+                </a>
+            </div>
         </div>
         
         <div class="progress mt-3" style="height: 6px;">
-            <div class="progress-bar bg-warning" style="width: 35%"></div>
+            <div class="progress-bar bg-warning" style="width: {{ module.progress }}%"></div>
         </div>
-        <small class="text-muted mt-1 d-block">%35 Tamamlandı</small>
+        <small class="text-muted mt-1 d-block">%{{ module.progress }} Tamamlandı</small>
     </div>
     {% endfor %}
 </div>
+
+<script>
+function upgradeLevel(moduleId, btnElement) {
+    // 1. Kullanıcıya sor
+    if(confirm("Başarın yeterliyse sorular zorlaşacak. Hazır mısın?")) {
+        
+        // 2. Butonu kilitle ve yazısını değiştir (Alert yok!)
+        const originalText = btnElement.innerText;
+        btnElement.disabled = true;
+        btnElement.innerHTML = "⏳ Bekle...";
+        
+        // 3. Backend'e git
+        fetch(`/api/upgrade_level/${moduleId}`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            // 4. Sadece işlem bitince mesaj ver
+            alert(data.message);
+            
+            // 5. Tamam'a basınca sayfayı yenile
+            location.reload(); 
+        })
+        .catch(error => {
+            console.error('Hata:', error);
+            alert("Bir hata oluştu.");
+            
+            // Hata olursa butonu eski haline getir
+            btnElement.disabled = false;
+            btnElement.innerText = originalText;
+        });
+    }
+}
+</script>
 
 </body>
 </html>

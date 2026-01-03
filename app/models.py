@@ -65,6 +65,11 @@ class Question(db.Model):
     difficulty_score = db.Column(db.Integer) 
     topic = db.Column(db.String(50))
 
+    # --- YENİ EKLENEN SÜTUN ---
+    # Şıkların hepsini (A, B, C) metin olarak burada tutacağız
+    options = db.Column(db.Text, nullable=True) 
+    # --------------------------
+
 # --- ANALİTİK VE İŞ MANTIĞI KATMANI ---
 
 class LearningEventFact(db.Model):

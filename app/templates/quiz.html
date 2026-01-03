@@ -6,7 +6,7 @@
     <title>Quiz</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #fff8e1; /* PDF'teki sarımtırak ton */ }
+        body { background-color: #fff8e1; }
         .container { max-width: 480px; background: white; min-height: 100vh; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
         .quiz-header {
             background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
@@ -24,36 +24,60 @@
 <div class="container p-0">
     
     <div class="quiz-header mb-4">
-        <a href="{{ url_for('student.course_detail', course_id=module.course_id) }}" class="text-white text-decoration-none fw-bold">← Çıkış</a>
-        <h2 class="fw-bold mt-2">{{ module.module_name }}</h2>
+        <a href="{{ url_for('student.course_detail', course_id=module.course_id) if module else '#' }}" class="text-white text-decoration-none fw-bold">← Çıkış</a>
+        <h2 class="fw-bold mt-2">{{ module.module_name if module else 'Quiz' }}</h2>
         <p class="mb-0 opacity-75">Quiz Zamanı! Başarılar.</p>
     </div>
 
     <form method="POST" class="px-4 pb-5">
         {% for q in questions %}
         <div class="question-card">
-            <h6 class="fw-bold text-primary mb-3">SORU {{ loop.index }}</h6>
+            
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-bold text-primary mb-0">SORU {{ loop.index }}</h6>
+                
+                {% if q.difficulty_score == 1 %}
+                    <span class="badge bg-success">Seviye 1 (Kolay)</span>
+                {% elif q.difficulty_score == 2 %}
+                    <span class="badge bg-info text-dark">Seviye 2 (Orta)</span>
+                {% elif q.difficulty_score >= 3 %}
+                    <span class="badge bg-danger">Seviye {{ q.difficulty_score }} (Zor)</span>
+                {% else %}
+                    <span class="badge bg-secondary">Standart</span>
+                {% endif %}
+            </div>
+
             <p class="fw-bold">{{ q.question_text }}</p>
             
-            <div class="form-check mb-2">
-                <input class="form-check-input" type="radio" name="question_{{ q.question_id }}" value="{{ q.question_answer }}" id="q{{ q.question_id }}_opt1" required>
-                <label class="form-check-label" for="q{{ q.question_id }}_opt1">
-                    {{ q.question_answer }} (Doğru Olabilir)
-                </label>
+            {% if q.options %}
+                {% set list_options = q.options | replace('[', '') | replace(']', '') | replace('"', '') | replace("'", "") %}
+                {% set clean_options = list_options.split(',') %}
+                
+                {% for opt in clean_options %}
+                    {% set clean_opt = opt.strip() %} 
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="question_{{ q.question_id }}" value="{{ clean_opt }}" id="q{{ q.question_id }}_{{ loop.index }}" required>
+                        <label class="form-check-label" for="q{{ q.question_id }}_{{ loop.index }}">
+                            {{ clean_opt }}
+                        </label>
+                    </div>
+                {% endfor %}
+
+            {% else %}
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="radio" name="question_{{ q.question_id }}" value="{{ q.question_answer }}" id="q{{ q.question_id }}_correct">
+                    <label class="form-check-label" for="q{{ q.question_id }}_correct">
+                        {{ q.question_answer }} (Doğru)
+                    </label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="radio" name="question_{{ q.question_id }}" value="Yanlış Cevap" id="q{{ q.question_id }}_wrong">
+                    <label class="form-check-label" for="q{{ q.question_id }}_wrong">
+                        Bilinmiyor
+                    </label>
+                </div>
+            {% endif %}
             </div>
-            <div class="form-check mb-2">
-                <input class="form-check-input" type="radio" name="question_{{ q.question_id }}" value="999" id="q{{ q.question_id }}_opt2">
-                <label class="form-check-label" for="q{{ q.question_id }}_opt2">
-                    {{ (q.question_answer | int) + 5 }} (Yanlış)
-                </label>
-            </div>
-            <div class="form-check">
-                <input class="form-check-input" type="radio" name="question_{{ q.question_id }}" value="888" id="q{{ q.question_id }}_opt3">
-                <label class="form-check-label" for="q{{ q.question_id }}_opt3">
-                    {{ (q.question_answer | int) - 3 }} (Yanlış)
-                </label>
-            </div>
-        </div>
         {% endfor %}
 
         <button type="submit" class="btn btn-primary w-100 py-3 rounded-pill fw-bold shadow-sm">
