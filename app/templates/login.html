@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pocket Teacher | Giriş</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f0f2f5; display: flex; align-items: center; justify-content: center; height: 100vh; }
+        .mobile-container {
+            width: 100%; max-width: 400px; background: white; 
+            border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            overflow: hidden; padding: 40px 30px;
+        }
+        .btn-purple { background-color: #6f42c1; color: white; border-radius: 50px; padding: 12px; font-weight: bold; width: 100%; }
+        .btn-purple:hover { background-color: #5a32a3; color: white; }
+        .form-control { border-radius: 15px; padding: 12px; background-color: #f8f9fa; border: 1px solid #eee; }
+    </style>
+</head>
+<body>
+
+<div class="mobile-container text-center">
+    <h3 class="mb-4 fw-bold" style="color: #333;">Pocket Teacher 🎓</h3>
+    <p class="text-muted mb-5">Devam etmek için giriş yapın.</p>
+
+    {% with messages = get_flashed_messages(category_filter=["danger"]) %}
+      {% if messages %}
+        <div class="alert alert-danger">{{ messages[0] }}</div>
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST">
+        <div class="mb-4 text-start">
+            <label class="form-label fw-bold text-muted small">EMAIL</label>
+            <input type="email" name="email" class="form-control" placeholder="denis@example.com" required value="denis@example.com">
+        </div>
+        
+        <div class="mb-4 text-start">
+            <label class="form-label fw-bold text-muted small">ŞİFRE</label>
+            <input type="password" class="form-control" placeholder="••••••" disabled>
+            <small class="text-muted" style="font-size: 10px;">(Demo sürümde şifre gerekmiyor)</small>
+        </div>
+
+        <button type="submit" class="btn btn-purple mb-3">Giriş Yap</button>
+    </form>
+    
+    <a href="#" class="text-decoration-none small text-muted">Şifremi Unuttum?</a>
+</div>
+
+</body>
+</html>
