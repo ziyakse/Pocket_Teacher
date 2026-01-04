@@ -1,8 +1,14 @@
-# app/student.py
-
+import json
+import random
+from flask_mail import Message
+from app import mail # __init__.py'den mail objesini çağırıyoruz
+from itsdangerous import URLSafeTimedSerializer
+from flask import current_app # Config'e erişmek için lazım
+from werkzeug.security import generate_password_hash, check_password_hash
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash
 from app.models import db, Student, Course, Module, Section, Question, LearningEventFact, AdaptiveState
 from datetime import datetime
+from app.ai_manager import generate_question_from_ai
 
 student_bp = Blueprint('student', __name__)
 
@@ -52,23 +58,73 @@ def calculate_progress(student_id, course_id=None, module_id=None):
 def login():
     if request.method == 'POST':
         email = request.form.get('email')
+        password = request.form.get('password')
+        
+        # 1. Kullanıcıyı bul
         user = Student.query.filter_by(email=email).first()
-        if user:
+        
+        # 2. Kullanıcı var mı VE şifresi doğru mu?
+        if user and user.check_password(password):
             session['user_id'] = user.student_id
             session['user_name'] = user.name
+            flash('Başarıyla giriş yapıldı! 🎉', 'success')
             return redirect(url_for('student.home'))
         else:
-            flash('Kullanıcı bulunamadı!', 'danger')
+            flash('Hatalı e-posta veya şifre! ❌', 'danger')
+            
     return render_template('login.html')
+
+# --- KAYIT OL (REGISTER) ---
+# app/routes/student.py içindeki register ve home fonksiyonlarını güncelle
+
+@student_bp.route('/register', methods=['GET', 'POST'])
+def register():
+    from app.models import City 
+    cities = City.query.all()
+
+    if request.method == 'POST':
+        name = request.form.get('name')
+        last_name = request.form.get('last_name')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        city_id = request.form.get('city_id')
+        grade = request.form.get('grade') # <--- YENİ: Formdan sınıfı alıyoruz
+        
+        existing_user = Student.query.filter_by(email=email).first()
+        if existing_user:
+            flash('Bu e-posta adresi zaten kayıtlı.', 'warning')
+            return redirect(url_for('student.register'))
+        
+        new_student = Student(
+            name=name,
+            last_name=last_name,
+            email=email,
+            city_id=city_id,
+            grade=int(grade), # <--- YENİ: Seçilen sınıfı kaydediyoruz (String gelir, int yaparız)
+            account_type='Free'
+        )
+        new_student.set_password(password)
+        
+        db.session.add(new_student)
+        db.session.commit()
+        
+        flash('Kayıt başarılı! Şimdi giriş yapabilirsin. 🚀', 'success')
+        return redirect(url_for('student.login'))
+
+    return render_template('register.html', cities=cities)
 
 @student_bp.route('/home')
 def home():
     if 'user_id' not in session: return redirect(url_for('student.login'))
     
-    user_name = session['user_name']
-    all_courses = Course.query.all()
+    # Giriş yapan öğrencinin bilgilerini çekiyoruz
+    user = Student.query.get(session['user_id'])
+    user_name = user.name
     
-    # Her dersin ilerlemesini hesaplayıp listeye ekleyelim
+    # --- KRİTİK DEĞİŞİKLİK: FİLTRELEME ---
+    # Sadece öğrencinin sınıfına (user.grade) ait dersleri getir!
+    all_courses = Course.query.filter_by(grade_level=user.grade).all()
+    
     courses_data = []
     for c in all_courses:
         progress = calculate_progress(session['user_id'], course_id=c.course_id)
@@ -76,7 +132,7 @@ def home():
             "course_id": c.course_id,
             "course_name": c.course_name,
             "grade_level": c.grade_level,
-            "progress": progress # Hesaplanan gerçek yüzde
+            "progress": progress
         })
         
     return render_template('home.html', user_name=user_name, courses=courses_data)
@@ -139,31 +195,70 @@ def module_content(module_id):
 
 @student_bp.route('/reset_module/<int:module_id>')
 def reset_module(module_id):
-    if 'user_id' not in session: return redirect(url_for('student.login'))
+    if 'user_id' not in session: return redirect(url_for('student.login')) # Güvenlik önlemi
+    student_id = session['user_id']
     
-    module = Module.query.get_or_404(module_id)
-    
-    # 1. Bu modüle ait soruları bul (Section üzerinden)
-    # SQL Mantığı: LearningEventFact tablosundan, bu modüldeki sorulara ait kayıtları sil.
-    
-    # Önce silinecek soruların ID'lerini bulalım
-    questions_in_module = db.session.query(Question.question_id)\
-        .join(Section).filter(Section.module_id == module_id).all()
-    
-    question_ids = [q.question_id for q in questions_in_module]
+    # 1. BU ÜNİTEYE AİT BÖLÜMÜ BUL
+    section = Section.query.filter_by(module_id=module_id).first()
+    if not section:
+        flash('Ünite bulunamadı.', 'danger')
+        return redirect(url_for('student.course_detail', course_id=1))
+
+    # --- ADIM 1: GEÇMİŞİ TEMİZLE (PUANLARI SİL) ---
+    # Bu ünitedeki sorulara verdiğin cevapları siliyoruz
+    questions = Question.query.filter_by(section_id=section.section_id).all()
+    question_ids = [q.question_id for q in questions]
     
     if question_ids:
-        # Bu ID'lere sahip cevap geçmişini sil
         LearningEventFact.query.filter(
-            LearningEventFact.student_id == session['user_id'],
-            LearningEventFact.question_id.in_(question_ids)
+            LearningEventFact.question_id.in_(question_ids),
+            LearningEventFact.student_id == student_id
         ).delete(synchronize_session=False)
-        
-        db.session.commit()
-        flash(f"'{module.module_name}' ünitesi sıfırlandı. Tekrar çözebilirsin!", "info")
-    else:
-        flash("Sıfırlanacak bir veri bulunamadı.", "warning")
 
+    # --- ADIM 2: ZOR SORULARI SİL (HAVUZU BOŞALT) ---
+    # Mevcut soruların hepsi siliniyor (Level 3, 4, 5 hepsi gider)
+    Question.query.filter_by(section_id=section.section_id).delete()
+    
+    # --- ADIM 3: TAZE BAŞLANGIÇ (SEVİYE 1 SORULARI GETİR) ---
+    module = Module.query.get(module_id)
+    topic = module.module_name
+    
+    # AI'dan 10 tane Seviye 1 soru istiyoruz
+    try:
+        # Seviye 1, 10 adet soru
+        ai_questions = generate_question_from_ai(topic, difficulty_level=1, count=10)
+        
+        if ai_questions:
+            for q_data in ai_questions:
+                all_options = [
+                    q_data['question_answer'],
+                    q_data.get('wrong_answer_1', 'Yanlış 1'),
+                    q_data.get('wrong_answer_2', 'Yanlış 2')
+                ]
+                random.shuffle(all_options)
+                
+                new_q = Question(
+                    section_id=section.section_id,
+                    question_text=q_data['question_text'],
+                    question_answer=q_data['question_answer'],
+                    difficulty_score=1,  # İşte burası! Kesinlikle 1. Seviye
+                    topic=topic,
+                    options=json.dumps(all_options)
+                )
+                db.session.add(new_q)
+            
+            success_msg = "Ünite sıfırlandı! Seviye 1 sorular hazırlandı."
+        else:
+            success_msg = "Ünite sıfırlandı ancak yeni soru üretilirken sorun oluştu."
+            
+    except Exception as e:
+        print(f"Reset sırasında hata: {e}")
+        success_msg = "Sıfırlama yapıldı (AI Hatası)."
+
+    db.session.commit()
+    
+    flash(success_msg, 'success')
+    # Doğru derse yönlendir (course_id'yi module üzerinden buluyoruz)
     return redirect(url_for('student.course_detail', course_id=module.course_id))
 
 @student_bp.route('/logout')
@@ -189,3 +284,70 @@ def achievements():
     ]
     
     return render_template('achievements.html', user_name=user_name, badges=badges, total_correct=total_correct)
+
+def send_reset_email(user_email):
+    # 1. Güvenli Token Oluştur (15 dk geçerli olur)
+    s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+    token = s.dumps(user_email, salt='password-reset-salt')
+    
+    # 2. Link Hazırla
+    link = url_for('student.reset_password', token=token, _external=True)
+    
+    # 3. Maili Gönder
+    msg = Message('Pocket Teacher - Şifre Sıfırlama', 
+                  sender=current_app.config['MAIL_USERNAME'], 
+                  recipients=[user_email])
+    
+    msg.body = f"""Merhaba,
+    
+Şifreni sıfırlamak için aşağıdaki linke tıkla:
+{link}
+
+Bu link 15 dakika boyunca geçerlidir.
+Eğer bu isteği sen yapmadıysan, bu maili görmezden gel.
+    """
+    mail.send(msg)
+
+@student_bp.route('/forgot_password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        user = Student.query.filter_by(email=email).first()
+        
+        if user:
+            # Kullanıcı varsa mail at, yoksa da güvenlik gereği "attık" de (Hacker bulamasın)
+            try:
+                send_reset_email(email)
+                flash('Sıfırlama linki e-posta adresine gönderildi! 📩', 'info')
+            except Exception as e:
+                print(e)
+                flash('Mail gönderilirken bir hata oluştu. Ayarlarını kontrol et.', 'danger')
+        else:
+            flash('Sıfırlama linki e-posta adresine gönderildi! 📩', 'info')
+            
+        return redirect(url_for('student.login'))
+        
+    return render_template('forgot_password.html')
+
+@student_bp.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+    
+    try:
+        # Token süresi dolmuş mu kontrol et (900 sn = 15 dk)
+        email = s.loads(token, salt='password-reset-salt', max_age=900)
+    except:
+        flash('Sıfırlama linki geçersiz veya süresi dolmuş.', 'danger')
+        return redirect(url_for('student.login'))
+    
+    if request.method == 'POST':
+        password = request.form.get('password')
+        
+        user = Student.query.filter_by(email=email).first()
+        if user:
+            user.set_password(password)
+            db.session.commit()
+            flash('Şifren başarıyla güncellendi! Giriş yapabilirsin. 🔑', 'success')
+            return redirect(url_for('student.login'))
+            
+    return render_template('reset_password.html')

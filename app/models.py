@@ -1,3 +1,4 @@
+from werkzeug.security import generate_password_hash, check_password_hash # <-- EN TEPEYE BUNU EKLE
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 
@@ -21,6 +22,9 @@ class Student(db.Model):
     name = db.Column(db.String(50), nullable=False)
     last_name = db.Column(db.String(50), nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
+    # Şifreli şifre sütunu (Uzunluğu 128 yaptık çünkü hash uzun olur)
+    password_hash = db.Column(db.String(128), nullable=False) 
+    
     city_id = db.Column(db.Integer, db.ForeignKey('cities.city_id'), nullable=False)
     birth_date = db.Column(db.Date)
     grade = db.Column(db.Integer)
@@ -28,6 +32,14 @@ class Student(db.Model):
     
     # İlişkiler
     adaptive_state = db.relationship('AdaptiveState', backref='student', uselist=False)
+
+    # Şifre Ayarlama Fonksiyonu
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    # Şifre Kontrol Fonksiyonu
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
 
 class Course(db.Model):
     __tablename__ = 'courses'
