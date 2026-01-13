@@ -12,7 +12,7 @@ CANDIDATE_MODELS = [
     "gemini-2.0-flash-exp",
     "gemini-2.0-flash-lite-preview-02-05",
     "gemini-1.5-flash"
-
+]
 def generate_question_from_ai(topic, difficulty_level, student_age=10, count=1):
     prompt_text = f"""
     Sen {student_age} yaşındaki bir öğrenci için eğlenceli bir öğretmensin.
