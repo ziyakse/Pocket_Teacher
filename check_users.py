@@ -5,7 +5,6 @@ app = create_app()
 
 def list_users():
     with app.app_context():
-        # Tüm öğrencileri veritabanından çek
         users = Student.query.all()
         
         print("\n" + "="*50)
@@ -16,7 +15,7 @@ def list_users():
             print(f"🆔 ID: {user.student_id}")
             print(f"👤 İsim: {user.name} {user.last_name}")
             print(f"📧 Email: {user.email}")
-            print(f"🔑 Şifre (Hash): {user.password_hash[:20]}...") # Şifrenin sadece başını gösteriyoruz
+            print(f"🔑 Şifre (Hash): {user.password_hash[:20]}...")
             print(f"🏙️  Şehir ID: {user.city_id}")
             print("-" * 30)
 

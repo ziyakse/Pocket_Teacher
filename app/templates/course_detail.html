@@ -74,31 +74,25 @@
 
 <script>
 function upgradeLevel(moduleId, btnElement) {
-    // 1. Kullanıcıya sor
     if(confirm("Başarın yeterliyse sorular zorlaşacak. Hazır mısın?")) {
         
-        // 2. Butonu kilitle ve yazısını değiştir (Alert yok!)
         const originalText = btnElement.innerText;
         btnElement.disabled = true;
         btnElement.innerHTML = "⏳ Bekle...";
         
-        // 3. Backend'e git
         fetch(`/api/upgrade_level/${moduleId}`, {
             method: 'POST'
         })
         .then(response => response.json())
         .then(data => {
-            // 4. Sadece işlem bitince mesaj ver
             alert(data.message);
             
-            // 5. Tamam'a basınca sayfayı yenile
             location.reload(); 
         })
         .catch(error => {
             console.error('Hata:', error);
             alert("Bir hata oluştu.");
             
-            // Hata olursa butonu eski haline getir
             btnElement.disabled = false;
             btnElement.innerText = originalText;
         });

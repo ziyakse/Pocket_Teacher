@@ -24,7 +24,6 @@ def test_courses():
 def test_submit_answer():
     print("\n--- Soru Cevaplama Testi (AI Mantığı) ---")
     
-    # Denis (id:1), Soru 1'e (Cevap: 18) doğru cevap veriyor mu?
     payload = {
         "student_id": 1,
         "question_id": 1,
@@ -43,8 +42,6 @@ def test_submit_answer():
 def test_purchase():
     print("\n--- Sosyal Etki (Satın Alma) Testi ---")
     
-    # H-2 Senaryosu: Denis (id:1) 100 TL'lik paket alıyor
-    # [cite_start]Sistem arkada Ali'yi (Van'daki öğrenciyi) bulup Premium yapmalı [cite: 106]
     payload = {
         "student_id": 1,
         "amount": 100.0
@@ -59,10 +56,4 @@ def test_purchase():
         print("❌ Hata:", response.text)
 
 if __name__ == "__main__":
-    # Öncekileri şimdilik çalıştırmasın diye önüne # koyduk
-    # test_login()
-    # test_courses()
-    # test_submit_answer()
-    
-    # Sadece yenisini test edelim
     test_purchase()

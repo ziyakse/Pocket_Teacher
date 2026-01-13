@@ -1,8 +1,6 @@
-# test_ai.py
 import google.generativeai as genai
 import os
 
-# API KEY'ini buraya doğrudan yaz (Test bitince silersin)
 API_KEY = "AIzaSyANN9KUf-NBkj6QLw_1ytZZV5jyut_KAKo"
 
 genai.configure(api_key=API_KEY)

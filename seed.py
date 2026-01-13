@@ -84,9 +84,7 @@ def generate_dynamic_question(course_name, topic, index, grade):
     w1 = ""
     w2 = ""
 
-    # ==================== MATEMATİK MODU ====================
     if course_name == "Matematik":
-        # 1. ve 2. Sınıf: Basit Toplama Çıkarma
         if grade <= 2:
             n1 = random.randint(1, 50)
             n2 = random.randint(1, 50)
@@ -104,7 +102,6 @@ def generate_dynamic_question(course_name, topic, index, grade):
             w1 = str(res + random.randint(1, 5))
             w2 = str(res - random.randint(1, 5))
 
-        # 3. ve 4. Sınıf: Çarpma, Bölme, Basit Problemler
         elif grade <= 4:
             n1 = random.randint(2, 12)
             n2 = random.randint(2, 12)
@@ -114,9 +111,8 @@ def generate_dynamic_question(course_name, topic, index, grade):
             w1 = str(res + random.choice([2, 5, 10]))
             w2 = str(res - 1)
 
-        # 5. ve 6. Sınıf: Kesirler, Büyük Sayılar, Üslü (Basit)
         elif grade <= 6:
-            if index % 2 == 0: # Çift numaralı sorularda Üslü sor
+            if index % 2 == 0:
                 base = random.randint(2, 5)
                 exp = random.randint(2, 3)
                 res = base ** exp
@@ -124,14 +120,13 @@ def generate_dynamic_question(course_name, topic, index, grade):
                 correct = str(res)
                 w1 = str(res + base)
                 w2 = str(res * 2)
-            else: # Tek numaralı sorularda Problem
+            else:
                 x = random.randint(10, 100)
                 q_text = f"Soru {index}: Hangi sayının 5 fazlası {x + 5} eder?"
                 correct = str(x)
                 w1 = str(x-5)
                 w2 = str(x+5)
 
-        # 7. ve 8. Sınıf: Denklem, Karekök, Cebir
         else:
             if "Karekök" in topic:
                 sq = random.choice([16, 25, 36, 49, 64, 81, 100, 144])
@@ -141,7 +136,7 @@ def generate_dynamic_question(course_name, topic, index, grade):
                 correct = str(res)
                 w1 = str(res+1)
                 w2 = str(res*2)
-            else: # Basit denklem 2x + a = b
+            else:
                 x = random.randint(2, 10)
                 a = random.randint(1, 20)
                 b = (2 * x) + a
@@ -150,9 +145,7 @@ def generate_dynamic_question(course_name, topic, index, grade):
                 w1 = str(x+1)
                 w2 = str(x-2)
 
-    # ==================== DİĞER DERSLER (SÖZEL) ====================
     else:
-        # 20 soruluk havuz için DAHA FAZLA ŞABLON (Çeşitlilik için)
         templates = [
             f"'{topic}' konusunda en önemli kavram hangisidir?",
             f"Aşağıdakilerden hangisi '{topic}' ile ilgilidir?",
@@ -166,10 +159,8 @@ def generate_dynamic_question(course_name, topic, index, grade):
             f"Hangisi '{topic}' ile doğrudan bağlantılı değildir?"
         ]
         
-        # Her soru için rastgele bir şablon seç
         q_text = random.choice(templates)
         
-        # Şıkların "Doğru Cevap" gibi görünmemesi için konuya özel sahte cevaplar
         if course_name == "İngilizce":
             correct = f"Correct Info about {topic}"
             w1 = "Wrong Grammar"
@@ -200,7 +191,6 @@ def seed_database():
         db.session.add(istanbul)
         db.session.flush()
 
-        # 3. ÖĞRENCİ (Varsayılan 5. sınıf)
         print("👤 Öğrenci (Denis) oluşturuluyor...")
         student = Student(
             name="Denis", last_name="Demir", email="denis@example.com",
@@ -211,7 +201,6 @@ def seed_database():
         db.session.add(student)
         db.session.commit()
 
-        # 4. MÜFREDAT YÜKLEME (1'den 8'e kadar)
         print("📚 1'den 8'e tüm sınıflar için ÖZEL müfredat yükleniyor (Bu işlem 5-10 saniye sürebilir)...")
 
         for grade in range(1, 9):
@@ -235,9 +224,6 @@ def seed_database():
                     db.session.add(section)
                     db.session.flush()
 
-                    # ---------------- DEĞİŞİKLİK BURADA ----------------
-                    # range(1, 6) yerine range(1, 21) yaptık.
-                    # Artık her üniteye tam 20 soru eklenecek.
                     for i in range(1, 21):
                         q_text, correct, w1, w2 = generate_dynamic_question(course_name, topic, i, grade)
                         

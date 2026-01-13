@@ -6,15 +6,12 @@ from dotenv import load_dotenv
 load_dotenv()
 api_key = os.getenv("GEMINI_API_KEY")
 
-# --- SENİN HESABINDA VAR OLAN MODELLER ---
-# test_ai.py çıktısına göre güncellendi.
 CANDIDATE_MODELS = [
-    "gemini-flash-latest",       # Senin listende bu vardı (En yüksek ihtimal)
-    "gemini-pro-latest",         # Bu da vardı
-    "gemini-2.0-flash-exp",      # Bu vardı (Kota sorunu olabilir ama denemeye değer)
+    "gemini-flash-latest",
+    "gemini-pro-latest",
+    "gemini-2.0-flash-exp",
     "gemini-2.0-flash-lite-preview-02-05",
-    "gemini-1.5-flash"           # Standart (Yedek)
-]
+    "gemini-1.5-flash"
 
 def generate_question_from_ai(topic, difficulty_level, student_age=10, count=1):
     prompt_text = f"""
@@ -48,18 +45,15 @@ def generate_question_from_ai(topic, difficulty_level, student_age=10, count=1):
         print("❌ HATA: API Key bulunamadı!")
         return None
 
-    # --- GÜVENLİ URL YAPISI ---
     part1 = "https://"
     part2 = "generativelanguage.googleapis.com"
     part3 = "/v1beta/models/"
     
     for model_name in CANDIDATE_MODELS:
-        # URL Birleştirme
         final_url = f"{part1}{part2}{part3}{model_name}:generateContent"
         params = {'key': api_key}
         
         try:
-            # print(f"Deneniyor: {model_name}...") 
             response = requests.post(final_url, params=params, headers={"Content-Type": "application/json"}, json=payload)
             
             if response.status_code != 200:

@@ -1,11 +1,8 @@
-from werkzeug.security import generate_password_hash, check_password_hash # <-- EN TEPEYE BUNU EKLE
+from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 
-# Veritabanı objesini burada oluşturuyoruz
 db = SQLAlchemy()
-
-# --- OPERASYONEL KATMAN (Boyut Tabloları) ---
 
 class City(db.Model):
     __tablename__ = 'cities'
@@ -22,7 +19,6 @@ class Student(db.Model):
     name = db.Column(db.String(50), nullable=False)
     last_name = db.Column(db.String(50), nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
-    # Şifreli şifre sütunu (Uzunluğu 128 yaptık çünkü hash uzun olur)
     password_hash = db.Column(db.String(128), nullable=False) 
     
     city_id = db.Column(db.Integer, db.ForeignKey('cities.city_id'), nullable=False)
@@ -30,14 +26,11 @@ class Student(db.Model):
     grade = db.Column(db.Integer)
     account_type = db.Column(db.String(50), default='Free') 
     
-    # İlişkiler
     adaptive_state = db.relationship('AdaptiveState', backref='student', uselist=False)
 
-    # Şifre Ayarlama Fonksiyonu
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
-    # Şifre Kontrol Fonksiyonu
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
@@ -77,12 +70,8 @@ class Question(db.Model):
     difficulty_score = db.Column(db.Integer) 
     topic = db.Column(db.String(50))
 
-    # --- YENİ EKLENEN SÜTUN ---
-    # Şıkların hepsini (A, B, C) metin olarak burada tutacağız
     options = db.Column(db.Text, nullable=True) 
-    # --------------------------
 
-# --- ANALİTİK VE İŞ MANTIĞI KATMANI ---
 
 class LearningEventFact(db.Model):
     __tablename__ = 'learning_event_fact'

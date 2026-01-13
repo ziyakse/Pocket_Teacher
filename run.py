@@ -1,8 +1,7 @@
 from app import create_app
-from dotenv import load_dotenv # <-- YENİ EKLENDİ
+from dotenv import load_dotenv
 import os
 
-# .env dosyasını yükle
 load_dotenv()
 
 app = create_app()
